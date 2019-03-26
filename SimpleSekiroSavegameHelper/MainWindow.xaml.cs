@@ -1,17 +1,18 @@
-﻿using System;
-using System.IO;
-using System.Windows;
-using Microsoft.Win32;
-using System.Windows.Media;
-using System.Windows.Interop;
+﻿using Microsoft.Win32;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Media;
 
 namespace SimpleSekiroSavegameHelper
 {
-    public partial class MainWindow : Window
+    public partial class MainWindow
     {
-        private string _filePath = null;
+        private string _filePath;
         private IntPtr _fileHandle = IntPtr.Zero;
 
         public MainWindow()
@@ -19,36 +20,70 @@ namespace SimpleSekiroSavegameHelper
             InitializeComponent();
         }
 
+        private void LoadLanguage()
+        {
+            var langName = CultureInfo.CurrentCulture.Name;
+            if (langName != @"zh-CN")
+            {
+                if (Application.LoadComponent(new Uri(@"Resources/Langs/en-US.xaml", UriKind.Relative)) is ResourceDictionary langRd)
+                {
+                    //如果已使用其他语言,先清空
+                    if (Resources.MergedDictionaries.Count > 0)
+                    {
+                        Resources.MergedDictionaries.Clear();
+                    }
+
+                    Resources.MergedDictionaries.Add(langRd);
+                }
+            }
+        }
+
+        public static string GetString(string key)
+        {
+            var value = key;
+
+            try
+            {
+                value = Application.Current.FindResource(key).ToString();
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+
+            return value;
+        }
+
         /// <summary>
         /// On window loaded.
         /// </summary>
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
-            IntPtr hwnd = new WindowInteropHelper(this).Handle;
-            if (!RegisterHotKey(hwnd, 9001, MOD_CONTROL, VK_L))
-                MessageBox.Show("A hotkey is already in use, it may not work.", "Simple Sekiro Savegame Helper");
-            if (!RegisterHotKey(hwnd, 9002, MOD_CONTROL, VK_U))
-                MessageBox.Show("A hotkey is already in use, it may not work.", "Simple Sekiro Savegame Helper");
-            if (!RegisterHotKey(hwnd, 9003, MOD_CONTROL, VK_B))
-                MessageBox.Show("A hotkey is already in use, it may not work.", "Simple Sekiro Savegame Helper");
-            if (!RegisterHotKey(hwnd, 9004, MOD_CONTROL, VK_R))
-                MessageBox.Show("A hotkey is already in use, it may not work.", "Simple Sekiro Savegame Helper");
+            LoadLanguage();
+            var hwnd = new WindowInteropHelper(this).Handle;
+            if (!RegisterHotKey(hwnd, 9001, MOD_CONTROL, VK_L) ||
+                !RegisterHotKey(hwnd, 9002, MOD_CONTROL, VK_U) ||
+                !RegisterHotKey(hwnd, 9003, MOD_CONTROL, VK_B) ||
+                !RegisterHotKey(hwnd, 9004, MOD_CONTROL, VK_R))
+            {
+                MessageBox.Show(GetString(@"HotkeyNotWork"), GetString(@"AppTitle"));
+            }
 
             // add a hook for WindowsMessageQueue to recognize hotkey-press
-            ComponentDispatcher.ThreadFilterMessage += new ThreadMessageEventHandler(ComponentDispatcherThreadFilterMessage);
+            ComponentDispatcher.ThreadFilterMessage += ComponentDispatcherThreadFilterMessage;
 
             _filePath = GetLatestSaveGame();
             if (_filePath != null)
             {
-                this.tbFile.Text = _filePath;
-                this.tbFile.Focus();
-                this.tbFile.Select(tbFile.Text.Length, 0);
-                this.tbLockStatus.Text = "UNLOCKED";
+                tbFile.Text = _filePath;
+                tbFile.Focus();
+                tbFile.Select(tbFile.Text.Length, 0);
+                tbLockStatus.Text = GetString(@"UNLOCKED");
                 Dictionary<string, string> backups = GetBackupsToSaveGame(_filePath);
-                this.cbBackups.Items.Clear();
+                cbBackups.Items.Clear();
                 foreach (var backup in backups)
-                    this.cbBackups.Items.Add(backup);
-                this.cbBackups.SelectedIndex = this.cbBackups.Items.Count - 1;
+                    cbBackups.Items.Add(backup);
+                cbBackups.SelectedIndex = cbBackups.Items.Count - 1;
             }
         }
 
@@ -108,11 +143,11 @@ namespace SimpleSekiroSavegameHelper
         /// <returns>The path to the most recent save game.</returns>
         private string GetLatestSaveGame()
         {
-            string defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Sekiro");
+            string defaultPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Sekiro");
             if (!Directory.Exists(defaultPath))
                 return null;
 
-            string[] filePaths = Directory.GetFiles(defaultPath, "*.sl2", SearchOption.AllDirectories);
+            string[] filePaths = Directory.GetFiles(defaultPath, @"*.sl2", SearchOption.AllDirectories);
             string latestSavegamePath = null;
             DateTime latestSavegameDate = new DateTime(1900, 1, 1);
             foreach (var filePath in filePaths)
@@ -135,11 +170,11 @@ namespace SimpleSekiroSavegameHelper
         private Dictionary<string, string> GetBackupsToSaveGame(string savePath)
         {
             Dictionary<string, string> backups = new Dictionary<string, string>();
-            string[] filePaths = Directory.GetFiles(Path.GetDirectoryName(savePath), "*.bak", SearchOption.TopDirectoryOnly);
+            string[] filePaths = Directory.GetFiles(Path.GetDirectoryName(savePath), @"*.bak", SearchOption.TopDirectoryOnly);
             foreach (var filePath in filePaths)
             {
                 FileInfo fileInfo = new FileInfo(filePath);
-                backups.Add(filePath, fileInfo.CreationTime.ToString("MM/dd HH:mm:ss"));
+                backups.Add(filePath, fileInfo.CreationTime.ToString(@"yyyy/MM/dd HH:mm:ss"));
             }
             return backups;
         }
@@ -154,9 +189,9 @@ namespace SimpleSekiroSavegameHelper
             _fileHandle = LockFile(_filePath);
             if (_fileHandle != IntPtr.Zero)
             {
-                this.tbLockStatus.Background = Brushes.Green;
-                this.tbLockStatus.Text = "LOCKED";
-            }   
+                tbLockStatus.Background = Brushes.Green;
+                tbLockStatus.Text = GetString(@"LOCKED");
+            }
         }
 
         /// <summary>
@@ -168,9 +203,9 @@ namespace SimpleSekiroSavegameHelper
                 return false;
             if (UnlockFile(_fileHandle))
             {
-                this._fileHandle = IntPtr.Zero;
-                this.tbLockStatus.Background = Brushes.White;
-                this.tbLockStatus.Text = "UNLOCKED";
+                _fileHandle = IntPtr.Zero;
+                tbLockStatus.Background = Brushes.White;
+                tbLockStatus.Text = GetString(@"UNLOCKED");
             }
             return true;
         }
@@ -183,15 +218,15 @@ namespace SimpleSekiroSavegameHelper
             if (_filePath == null || !File.Exists(_filePath))
                 return;
             DateTime now = DateTime.Now;
-            string backupPath = Path.Combine(Path.GetDirectoryName(_filePath), Path.GetFileNameWithoutExtension(_filePath)+ "_backup_" + now.ToString("yyyy-MM-dd-HHmmss") + ".bak");
+            string backupPath = Path.Combine(Path.GetDirectoryName(_filePath), $@"{Path.GetFileNameWithoutExtension(_filePath)}_backup_{now:yyyy-MM-dd-HHmmss}.bak");
             if (File.Exists(backupPath))
                 return;
             File.Copy(_filePath, backupPath, true);
             if (File.Exists(backupPath))
             {
-                this.tbSaveStatus.Text = "BACKUP SAVED: " + now.ToString("HH:mm:ss");
-                this.cbBackups.Items.Add(new KeyValuePair<string, string>(backupPath, now.ToString("MM/dd HH:mm:ss")));
-                this.cbBackups.SelectedIndex = this.cbBackups.Items.Count - 1;
+                tbSaveStatus.Text = $@"{GetString(@"BACKUPSAVED")}{now:yyyy/MM/dd HH:mm:ss}";
+                cbBackups.Items.Add(new KeyValuePair<string, string>(backupPath, now.ToString(@"yyyy/MM/dd HH:mm:ss")));
+                cbBackups.SelectedIndex = cbBackups.Items.Count - 1;
             }
         }
 
@@ -200,16 +235,16 @@ namespace SimpleSekiroSavegameHelper
         /// </summary>
         private void RevertSaveGameFile()
         {
-            if (_filePath == null || !File.Exists(_filePath) || this.cbBackups.SelectedIndex < 0)
+            if (_filePath == null || !File.Exists(_filePath) || cbBackups.SelectedIndex < 0)
                 return;
-            KeyValuePair<string, string> backup = (KeyValuePair<string, string>)this.cbBackups.SelectedItem;
+            KeyValuePair<string, string> backup = (KeyValuePair<string, string>)cbBackups.SelectedItem;
             if (!File.Exists(backup.Key))
                 return;
             if (_fileHandle != IntPtr.Zero)
             {
                 if (!UnlockSaveGameFile())
                 {
-                    MessageBox.Show("Could not unlock file!", "Simple Sekiro Savegame Helper");
+                    MessageBox.Show(GetString(@"UnlockFailed"), GetString(@"AppTitle"));
                     return;
                 }
             }
@@ -217,7 +252,7 @@ namespace SimpleSekiroSavegameHelper
             File.Copy(backup.Key, _filePath, true);
             if (File.Exists(_filePath))
             {
-                this.tbSaveStatus.Text = "REVERTED TO BACKUP FROM: " + backup.Value;
+                tbSaveStatus.Text = $@"{GetString(@"RestoreBackup")}{backup.Value}";
             }
         }
 
@@ -295,26 +330,26 @@ namespace SimpleSekiroSavegameHelper
 
         private void TbFile_PreviewMouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            string newPath = OpenFile(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Sekiro"), ".sl2", "Sekiro Save Game File");
+            string newPath = OpenFile(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), @"Sekiro"), @".sl2", GetString(@"Filter"));
             if (!string.IsNullOrEmpty(newPath))
             {
                 if (_fileHandle != IntPtr.Zero)
                 {
                     if (!UnlockSaveGameFile())
                     {
-                        MessageBox.Show("Could not unlock previous file!", "Simple Sekiro Savegame Helper");
+                        MessageBox.Show(GetString(@"UnlockPreFailed"), GetString(@"AppTitle"));
                     }
                 }
                 _filePath = newPath;
-                this.tbFile.Text = _filePath;
-                this.tbFile.Focus();
-                this.tbFile.Select(tbFile.Text.Length, 0);
-                this.tbLockStatus.Text = "UNLOCKED";
+                tbFile.Text = _filePath;
+                tbFile.Focus();
+                tbFile.Select(tbFile.Text.Length, 0);
+                tbLockStatus.Text = GetString(@"UNLOCKED");
                 Dictionary<string, string> backups = GetBackupsToSaveGame(_filePath);
-                this.cbBackups.Items.Clear();
+                cbBackups.Items.Clear();
                 foreach (var backup in backups)
-                    this.cbBackups.Items.Add(backup);
-                this.cbBackups.SelectedIndex = this.cbBackups.Items.Count - 1;
+                    cbBackups.Items.Add(backup);
+                cbBackups.SelectedIndex = cbBackups.Items.Count - 1;
             }
         }
 

@@ -1,0 +1,17 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+    <system:String x:Key="AppTitle">只狼存档辅助 v1.0.0</system:String>
+    <system:String x:Key="LanguageLockButton">锁定存档 (CTRL + L)</system:String>
+    <system:String x:Key="LanguageUnLockButton">解锁存档 (CTRL + U)</system:String>
+    <system:String x:Key="LanguageBackupButton">备份存档 (CTRL + B)</system:String>
+    <system:String x:Key="LanguageRestoreButton">恢复选中的存档 (CTRL + R)</system:String>
+    <system:String x:Key="UNLOCKED">已解锁</system:String>
+    <system:String x:Key="LOCKED">锁定中</system:String>
+    <system:String x:Key="HotkeyNotWork">某个热键被占用</system:String>
+    <system:String x:Key="BACKUPSAVED">已备份:</system:String>
+    <system:String x:Key="UnlockFailed">解锁存档失败！</system:String>
+    <system:String x:Key="RestoreBackup">恢复存档:</system:String>
+    <system:String x:Key="UnlockPreFailed">解锁之前存档失败！</system:String>
+    <system:String x:Key="Filter">只狼存档</system:String>
+</ResourceDictionary>
