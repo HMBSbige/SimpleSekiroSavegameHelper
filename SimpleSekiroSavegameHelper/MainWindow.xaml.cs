@@ -174,7 +174,7 @@ namespace SimpleSekiroSavegameHelper
             foreach (var filePath in filePaths)
             {
                 FileInfo fileInfo = new FileInfo(filePath);
-                backups.Add(filePath, fileInfo.CreationTime.ToString(@"yyyy/MM/dd HH:mm:ss"));
+                backups.Add(filePath, $@"{Path.GetFileNameWithoutExtension(fileInfo.Name)} {fileInfo.LastWriteTime:yyyy/MM/dd HH:mm:ss}");
             }
             return backups;
         }
